@@ -75,9 +75,11 @@ addRequestForUploadFileAtLocalPath:toRemotePath:
 ``` objective-c
 [self.requestsManager startProcessingRequests];
 ```
-modify by zhengzeqin
+##modify by zhengzeqin
 修改成支持block方式，添加断点续传，删除任务，修改成支持无账户密码也支持链接方式
 使用方式
+
+```objective-c
     //1.创建对象
     FTPManagerTaskObj *obj = [FTPManagerTaskObj new];
     obj.hostUrl = @"";
@@ -92,18 +94,17 @@ modify by zhengzeqin
             NSLog(@"完成百分比 = %f", progress);
         }else if (type == FTPManagerTypeDidCompleteDownload || type == FTPManagerTypeDidFail){
         //3.注意回收任务
-            NSLog(@"下载完毕或者失败 删除当前任务");
+        NSLog(@"下载完毕或者失败 删除当前任务");
             
-            [[FTPManagerTool sharedInstance].taskDic removeObjectForKey:obj.taskName];
+	[[FTPManagerTool sharedInstance].taskDic removeObjectForKey:obj.taskName];
         }
     }isReDownLoad:YES];
     
-    /* 支持断点续传，支持暂停 和  继续
+   	 //支持断点续传，支持暂停 和  继续
     //1.从操作工具取出下载器
     GRRequestsManager *requestManager  = [[FTPManagerTool sharedInstance].taskDic objectForKey:obj.taskName];
     //2.暂停
     [requestManager pause];
-   // 3.继续
+    //3.继续
     [requestManager resume];
-     
-     */
+```
