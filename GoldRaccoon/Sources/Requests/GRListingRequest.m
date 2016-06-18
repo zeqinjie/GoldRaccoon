@@ -23,8 +23,8 @@
 
 @implementation GRListingRequest
 
-@synthesize filesInfo = _filesInfo;
-@synthesize receivedData = _receivedData;
+@synthesize filesInfo;
+@synthesize receivedData;
 
 - (BOOL)fileExists:(NSString *)fileNamePath
 {
@@ -53,7 +53,7 @@
 - (void)start
 {
     self.maximumSize = LONG_MAX;
-    
+    //开启读取流
     // open the read stream and check for errors calling delegate methods
     // if things fail. This encapsulates the streamInfo object and cleans up our code.
     [self.streamInfo openRead:self];
@@ -68,34 +68,37 @@
 			self.filesInfo = [NSMutableArray array];
             self.didOpenStream = YES;
             self.receivedData = [NSMutableData data];
-            break;
-        }
+        } break;
             
         case NSStreamEventHasBytesAvailable: {
             data = [self.streamInfo read:self];
             
             if (data) {
-                [self.receivedData appendData:data];
+                [self.receivedData appendData: data];
             }
             else {
+                NSLog(@"Stream opened, but failed while trying to read from it.");
                 [self.streamInfo streamError:self errorCode:kGRFTPClientCantReadStream];
             }
-            break;
         }
+        break;
             
-        case NSStreamEventHasSpaceAvailable:
+        case NSStreamEventHasSpaceAvailable: {
+            
+        } 
         break;
             
         case NSStreamEventErrorOccurred: {
             [self.streamInfo streamError:self errorCode:[GRError errorCodeWithError:[theStream streamError]]];
-            break;
+            NSLog(@"%@", self.error.message);
         }
+        break;
             
         case NSStreamEventEndEncountered: {
             NSUInteger  offset = 0;
             CFIndex     parsedBytes;
             uint8_t *bytes = (uint8_t *)[self.receivedData bytes];
-            NSUInteger totalbytes = [self.receivedData length];
+            int totalbytes = [self.receivedData length];
             
             do {
                 CFDictionaryRef listingEntity = NULL;
@@ -109,8 +112,8 @@
             } while (parsedBytes > 0);
             
             [self.streamInfo streamComplete:self];
-            break;
         }
+        break;
         
         default:
             break;

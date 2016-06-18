@@ -25,7 +25,7 @@
 {
     NSString *_path;
 }
-
+//manager
 @property (nonatomic, weak) id <GRRequestDelegate> delegate;
 @property (nonatomic, weak) id <GRRequestDataSource> dataSource;
 

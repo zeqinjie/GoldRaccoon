@@ -20,11 +20,11 @@
 @optional
 
 /**
- @brief Called to notify the delegate that a given request has been scheduled.
+ @brief Called to notify the delegate that a given request started.
  @param requestsManager The requests manager.
  @param request The request.
  */
-- (void)requestsManager:(id<GRRequestsManagerProtocol>)requestsManager didScheduleRequest:(id<GRRequestProtocol>)request;
+- (void)requestsManager:(id<GRRequestsManagerProtocol>)requestsManager didStartRequest:(id<GRRequestProtocol>)request;
 
 /**
  @brief Called to notify the delegate that a given listing request completed.
@@ -85,12 +85,6 @@
  @param error The error reporterd.
  */
 - (void)requestsManager:(id<GRRequestsManagerProtocol>)requestsManager didFailRequest:(id<GRRequestProtocol>)request withError:(NSError *)error;
-
-/**
- @brief Called to notify the delegate that the queue has been emptied.
- @param requestsManager The requests manager.
- */
-- (void)requestsManagerDidCompleteQueue:(id<GRRequestsManagerProtocol>)requestsManager;
 
 @end
 
@@ -164,9 +158,9 @@
  */
 - (BOOL)cancelRequest:(id<GRRequestProtocol>)request;
 
-/**
- @brief Returns the number of requests currently in the queue.
- */
-- (NSUInteger)remainingRequests;
+//暂停
+- (void)pause;
+//继续
+- (void)resume;
 
 @end

@@ -11,7 +11,7 @@
 //
 //  Modified and redesigned by Alberto De Bortoli.
 //  Copyright 2013 Alberto De Bortoli. All rights reserved.
-//
+//  创建目录请求
 
 #import "GRRequest.h"
 

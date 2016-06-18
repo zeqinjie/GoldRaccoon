@@ -8,7 +8,7 @@
 
 #import "GRDemoViewController.h"
 #import "GRRequestsManager.h"
-
+#import "FTPManagerTool.h"
 @interface GRDemoViewController () <GRRequestsManagerDelegate, UITextFieldDelegate>
 
 @property (nonatomic, strong) GRRequestsManager *requestsManager;
@@ -27,60 +27,81 @@
 
 @implementation GRDemoViewController
 
-- (IBAction)listingButton:(id)sender
-{
-    [self _setupManager];
-    [self.requestsManager addRequestForListDirectoryAtPath:@"/"];
-    [self.requestsManager startProcessingRequests];
-}
 
+
+//创建目录
 - (IBAction)createDirectoryButton:(id)sender
 {
-    [self _setupManager];
-    [self.requestsManager addRequestForCreateDirectoryAtPath:@"dir/"];
-    [self.requestsManager startProcessingRequests];
+    //例子 创建远程目录
+    FTPManagerTaskObj *obj = [FTPManagerTaskObj new];
+    obj.hostUrl = @"";
+    obj.userName = @"";
+    obj.userPwd = @"";
+    obj.remotePath = @"";
+    obj.taskName = @"";
+    [[FTPManagerTool sharedInstance] creatRemPathTaskObj:obj block:^(GRRequestsManager *requestMan, GRRequest *request, CGFloat progress, NSString *pathStr, NSArray *listArr, NSError *error, FTPManagerType type) {
+        if (type == FTPManagerTypeDidStart) {
+            //开始
+        }else if (type == FTPManagerTypeDidCompleteCreateDirectory){
+            //完成
+            [[FTPManagerTool sharedInstance].taskDic removeObjectForKey:obj.taskName];
+        }else if (type == FTPManagerTypeDidFail){
+            //失败
+            [[FTPManagerTool sharedInstance].taskDic removeObjectForKey:obj.taskName];
+        }
+    }];
+}
+
+
+
+- (IBAction)downloadFileButton:(id)sender
+{
+    FTPManagerTaskObj *obj = [FTPManagerTaskObj new];
+    obj.hostUrl = @"";
+    obj.userName = @"";
+    obj.userPwd = @"";
+    obj.taskName = obj.remotePath = @"down/null/1/1465011847256.txt";
+    
+    [[FTPManagerTool sharedInstance]downLoadTaskObj:obj block:^(GRRequestsManager *requestMan,GRRequest *request, CGFloat progress, NSString *pathStr, NSArray *listArr, NSError *error, FTPManagerType type) {
+        if(type == FTPManagerTypeDidStart) {
+            NSLog(@"开启请求:requestsManager:didStartRequest:");
+        }else if (type == FTPManagerTypeDidCompletePercent){
+            NSLog(@"完成百分比 = %f", progress);
+        }else if (type == FTPManagerTypeDidCompleteDownload){
+            NSLog(@"下载完毕 删除当前任务");
+            [[FTPManagerTool sharedInstance].taskDic removeObjectForKey:obj.taskName];
+        }
+    }isReDownLoad:YES];
+    
+    /* 支持断点续传，支持暂停 和  继续
+    //1.从操作工具取出下载器
+    GRRequestsManager *requestManager  = [[FTPManagerTool sharedInstance].taskDic objectForKey:obj.taskName];
+    //2.暂停
+    [requestManager pause];
+   // 3.继续
+    [requestManager resume];
+     
+     */
 }
 
 - (IBAction)deleteDirectoryButton:(id)sender
 {
-    [self _setupManager];
-    [self.requestsManager addRequestForDeleteDirectoryAtPath:@"dir/"];
-    [self.requestsManager startProcessingRequests];
+    //类似写
 }
 
 - (IBAction)deleteFileButton:(id)sender
 {
-    [self _setupManager];
-    [self.requestsManager addRequestForDeleteFileAtPath:@"dir/file.txt"];
-    [self.requestsManager startProcessingRequests];
+    //类似写
 }
 
 - (IBAction)uploadFileButton:(id)sender
 {
-    [self _setupManager];
-    NSString *bundlePath = [[NSBundle mainBundle] pathForResource:@"TestFile" ofType:@"txt"];
-    [self.requestsManager addRequestForUploadFileAtLocalPath:bundlePath toRemotePath:@"dir/file.txt"];
-    [self.requestsManager startProcessingRequests];
+    //类似写
 }
 
-- (IBAction)downloadFileButton:(id)sender
+- (IBAction)listingButton:(id)sender
 {
-    [self _setupManager];
-    NSString *documentsDirectoryPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
-    NSString *localFilePath = [documentsDirectoryPath stringByAppendingPathComponent:@"DownloadedFile.txt"];
-
-    [self.requestsManager addRequestForDownloadFileAtRemotePath:@"dir/file.txt" toLocalPath:localFilePath];
-    [self.requestsManager startProcessingRequests];
-}
-
-#pragma mark - Private Methods
-
-- (void)_setupManager
-{
-    self.requestsManager = [[GRRequestsManager alloc] initWithHostname:[self.hostnameTextField text]
-                                                                  user:[self.usernameTextField text]
-                                                              password:[self.passwordTextField text]];
-    self.requestsManager.delegate = self;
+    
 }
 
 #pragma mark - UITextFieldDelegate
@@ -91,51 +112,6 @@
     return YES;
 }
 
-#pragma mark - GRRequestsManagerDelegate
 
-- (void)requestsManager:(id<GRRequestsManagerProtocol>)requestsManager didScheduleRequest:(id<GRRequestProtocol>)request
-{
-    NSLog(@"requestsManager:didScheduleRequest:");
-}
-
-- (void)requestsManager:(id<GRRequestsManagerProtocol>)requestsManager didCompleteListingRequest:(id<GRRequestProtocol>)request listing:(NSArray *)listing
-{
-    NSLog(@"requestsManager:didCompleteListingRequest:listing: \n%@", listing);
-}
-
-- (void)requestsManager:(id<GRRequestsManagerProtocol>)requestsManager didCompleteCreateDirectoryRequest:(id<GRRequestProtocol>)request
-{
-    NSLog(@"requestsManager:didCompleteCreateDirectoryRequest:");
-}
-
-- (void)requestsManager:(id<GRRequestsManagerProtocol>)requestsManager didCompleteDeleteRequest:(id<GRRequestProtocol>)request
-{
-    NSLog(@"requestsManager:didCompleteDeleteRequest:");
-}
-
-- (void)requestsManager:(id<GRRequestsManagerProtocol>)requestsManager didCompletePercent:(float)percent forRequest:(id<GRRequestProtocol>)request
-{
-    NSLog(@"requestsManager:didCompletePercent:forRequest: %f", percent);
-}
-
-- (void)requestsManager:(id<GRRequestsManagerProtocol>)requestsManager didCompleteUploadRequest:(id<GRDataExchangeRequestProtocol>)request
-{
-    NSLog(@"requestsManager:didCompleteUploadRequest:");
-}
-
-- (void)requestsManager:(id<GRRequestsManagerProtocol>)requestsManager didCompleteDownloadRequest:(id<GRDataExchangeRequestProtocol>)request
-{
-    NSLog(@"requestsManager:didCompleteDownloadRequest:");
-}
-
-- (void)requestsManager:(id<GRRequestsManagerProtocol>)requestsManager didFailWritingFileAtPath:(NSString *)path forRequest:(id<GRDataExchangeRequestProtocol>)request error:(NSError *)error
-{
-    NSLog(@"requestsManager:didFailWritingFileAtPath:forRequest:error: \n %@", error);
-}
-
-- (void)requestsManager:(id<GRRequestsManagerProtocol>)requestsManager didFailRequest:(id<GRRequestProtocol>)request withError:(NSError *)error
-{
-    NSLog(@"requestsManager:didFailRequest:withError: \n %@", error);
-}
 
 @end

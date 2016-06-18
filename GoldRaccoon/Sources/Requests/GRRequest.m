@@ -12,31 +12,39 @@
 //  Modified and redesigned by Alberto De Bortoli.
 //  Copyright 2013 Alberto De Bortoli. All rights reserved.
 //
+// 请求父类
 
 #import "GRRequest.h"
 
 @implementation GRRequest
 
-@synthesize passiveMode = _passiveMode;
-@synthesize uuid = _uuid;
-@synthesize error = _error;
-@synthesize streamInfo = _streamInfo;
-@synthesize maximumSize = _maximumSize;
-@synthesize percentCompleted = _percentCompleted;
-@synthesize delegate = _delegate;
-@synthesize didOpenStream = _didOpenStream;
+@synthesize passiveMode;
+@synthesize uuid;
+@synthesize error;
+@synthesize streamInfo;
+@synthesize maximumSize;
+@synthesize percentCompleted;
+@synthesize delegate;
+@synthesize didOpenStream;
 @synthesize path = _path;
 
 - (instancetype)initWithDelegate:(id<GRRequestDelegate>)aDelegate datasource:(id<GRRequestDataSource>)aDatasource
 {
     self = [super init];
     if (self) {
-		_passiveMode = YES;
-        _uuid = [[NSUUID UUID] UUIDString];
-        _path = nil;
-        _streamInfo = [[GRStreamInfo alloc] init];
-        _delegate = aDelegate;
-        _dataSource = aDatasource;
+		self.passiveMode = YES;
+        self.uuid        = [[NSUUID UUID] UUIDString];
+        self.path        = nil;
+        //实例化 一个流对象
+        self.streamInfo = [[GRStreamInfo alloc] init];
+        self.streamInfo.readStream = nil;
+        self.streamInfo.writeStream = nil;
+        self.streamInfo.bytesThisIteration = 0;
+        self.streamInfo.bytesTotal = 0;
+        self.streamInfo.timeout = 30;
+        //设置代理对象manager
+        self.delegate   = aDelegate;
+        self.dataSource = aDatasource;
     }
     return self;
 }
@@ -52,7 +60,9 @@
     }
     NSString *path = [self.path hasPrefix:@"/"] ? [self.path substringFromIndex:1] : self.path;
     NSString *fullURLString = [NSString stringWithFormat:@"%@%@/%@", ftpPrefix, hostname, path];
+    NSLog(@"fullURL = %@",fullURLString);
     return [NSURL URLWithString:fullURLString];
+    
 }
 
 - (NSURL *)fullURLWithEscape
@@ -122,6 +132,13 @@
     // override in subclasses
 }
 
+- (void)pause{
+    // override in subclasses
+}
+- (void)resume{
+    // override in subclasses
+}
+
 - (long)bytesSent
 {
     return self.streamInfo.bytesThisIteration;
@@ -144,7 +161,7 @@
 
 - (void)cancelRequest
 {
-    self.streamInfo.cancelRequestFlag = YES;
+    self.streamInfo.cancelRequestFlag = TRUE;
 }
 
 - (BOOL)cancelDoesNotCallDelegate
@@ -154,6 +171,7 @@
 
 - (void)setCancelDoesNotCallDelegate:(BOOL)cancelDoesNotCallDelegate
 {
+    //删除回调代理
     self.streamInfo.cancelDoesNotCallDelegate = cancelDoesNotCallDelegate;
 }
 

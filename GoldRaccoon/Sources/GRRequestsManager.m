@@ -21,12 +21,8 @@
 
 @property (nonatomic, copy) NSString *username;
 @property (nonatomic, copy) NSString *password;
-@property (nonatomic, strong) NSMutableData *currentDownloadData;
-@property (nonatomic, strong) NSData *currentUploadData;
 @property (nonatomic, strong) GRQueue *requestQueue;
 @property (nonatomic, strong) GRRequest *currentRequest;
-@property (nonatomic, assign) BOOL delegateRespondsToPercentProgress;
-@property (nonatomic, assign) BOOL isRunning;
 
 - (id<GRRequestProtocol>)_addRequestOfType:(Class)clazz withPath:(NSString *)filePath;
 - (id<GRDataExchangeRequestProtocol>)_addDataExchangeRequestOfType:(Class)clazz withLocalPath:(NSString *)localPath remotePath:(NSString *)remotePath;
@@ -36,6 +32,19 @@
 @end
 
 @implementation GRRequestsManager
+{
+    //当前下载数据 服务器appendData
+    NSMutableData *_currentDownloadData;
+    //已经下载的数据
+    NSData *_haveDownloadData;
+    //当前上传数据 本地获取
+    NSData *_currentUploadData;
+    
+    BOOL _isRunning;
+    
+@private
+    BOOL _delegateRespondsToPercentProgress;
+}
 
 @synthesize hostname = _hostname;
 @synthesize delegate = _delegate;
@@ -44,14 +53,13 @@
 
 - (instancetype)init
 {
-    [self doesNotRecognizeSelector:_cmd];
+    NSAssert(NO, @"Initializer not allowed. Use designated initializer initWithHostname:username:password:");
     return nil;
 }
 
 - (instancetype)initWithHostname:(NSString *)hostname user:(NSString *)username password:(NSString *)password
 {
     NSAssert([hostname length], @"hostname must not be nil");
-    
     self = [super init];
     if (self) {
         _hostname = hostname;
@@ -61,11 +69,13 @@
         _isRunning = NO;
         _delegateRespondsToPercentProgress = NO;
     }
+    NSLog(@"manager address = %p",self);
     return self;
 }
 
 - (void)dealloc
 {
+    NSLog(@"dealloc manager address = %p",self);
     [self stopAndCancelAllRequests];
 }
 
@@ -79,6 +89,10 @@
     }
 }
 
+- (void)setBlock:(FTPManCompStateBlock)block{
+    _block = block;
+    _delegateRespondsToPercentProgress = YES;
+}
 #pragma mark - Public Methods
 
 - (void)startProcessingRequests
@@ -92,7 +106,7 @@
 - (void)stopAndCancelAllRequests
 {
     [self.requestQueue clear];
-    self.currentRequest.cancelDoesNotCallDelegate = YES;
+    self.currentRequest.cancelDoesNotCallDelegate = TRUE;
     [self.currentRequest cancelRequest];
     self.currentRequest = nil;
     _isRunning = NO;
@@ -103,15 +117,24 @@
     return [self.requestQueue removeObject:request];
 }
 
-- (NSUInteger)remainingRequests
-{
-    return [self.requestQueue count];
+//暂停
+- (void)pause{
+    [self.currentRequest pause];
+}
+//继续
+- (void)resume{
+    [self.currentRequest resume];
+}
+
+- (void)start{
+    [self.currentRequest start];
 }
 
 #pragma mark - FTP Actions
 
 - (id<GRRequestProtocol>)addRequestForListDirectoryAtPath:(NSString *)path
 {
+    NSLog(@" path = %@",path);
     return [self _addRequestOfType:[GRListingRequest class] withPath:path];
 }
 
@@ -141,7 +164,7 @@
 }
 
 #pragma mark - GRRequestDelegate required
-
+//请求完成
 - (void)requestCompleted:(GRRequest *)request
 {
     // listing request
@@ -155,12 +178,20 @@
                  didCompleteListingRequest:((GRListingRequest *)request)
                                    listing:listing];
         }
+        
+        if (self.block) {
+            self.block(self,((GRListingRequest *)request),0,nil,listing,nil,FTPManagerTypeDidCompleteListing);
+        }
     }
     
     // create directory request
     if ([request isKindOfClass:[GRCreateDirectoryRequest class]]) {
         if ([self.delegate respondsToSelector:@selector(requestsManager:didCompleteCreateDirectoryRequest:)]) {
             [self.delegate requestsManager:self didCompleteCreateDirectoryRequest:(GRUploadRequest *)request];
+        }
+        
+        if (self.block) {
+            self.block(self,(GRUploadRequest *)request,0,nil,nil,nil,FTPManagerTypeDidCompleteCreateDirectory);
         }
     }
 
@@ -169,6 +200,10 @@
         if ([self.delegate respondsToSelector:@selector(requestsManager:didCompleteDeleteRequest:)]) {
             [self.delegate requestsManager:self didCompleteDeleteRequest:(GRUploadRequest *)request];
         }
+        
+        if (self.block) {
+            self.block(self,(GRUploadRequest *)request,0,nil,nil,nil,FTPManagerTypeDidCompleteDelete);
+        }
     }
 
     // upload request
@@ -176,11 +211,17 @@
         if ([self.delegate respondsToSelector:@selector(requestsManager:didCompleteUploadRequest:)]) {
             [self.delegate requestsManager:self didCompleteUploadRequest:(GRUploadRequest *)request];
         }
+        
+        if (self.block) {
+            self.block(self,(GRUploadRequest *)request,0,nil,nil,nil,FTPManagerTypeDidCompleteUpload);
+        }
+        
         _currentUploadData = nil;
     }
     
     // download request
     else if ([request isKindOfClass:[GRDownloadRequest class]]) {
+/*
         NSError *writeError = nil;
         BOOL writeToFileSucceeded = [_currentDownloadData writeToFile:((GRDownloadRequest *)request).localFilePath
                                                               options:NSDataWritingAtomic
@@ -199,17 +240,46 @@
                                          error:writeError];
             }
         }
+*/
+        
+        if ([self.delegate respondsToSelector:@selector(requestsManager:didCompleteDownloadRequest:)]) {
+            [self.delegate requestsManager:self didCompleteDownloadRequest:(GRDownloadRequest *)request];
+        }
+        
+        if (self.block) {
+            self.block(self,(GRDownloadRequest *)request,0,nil,nil,nil,FTPManagerTypeDidCompleteDownload);
+        }
+        
+        NSError *writeError = nil;
+        if ([self.delegate respondsToSelector:@selector(requestsManager:didFailWritingFileAtPath:forRequest:error:)]) {
+            [self.delegate requestsManager:self
+                  didFailWritingFileAtPath:((GRDownloadRequest *)request).localFilePath
+                                forRequest:(GRDownloadRequest *)request
+                                     error:writeError];
+        }
+        
+        if (self.block) {
+            self.block(self,(GRDownloadRequest *)request,0,nil,nil,writeError,FTPManagerTypeDidFailWritingFileAtPath);
+        }
+
         _currentDownloadData = nil;
     }
     
     [self _processNextRequest];
+    
+    [[NSNotificationCenter defaultCenter]postNotificationName:FTPDidFishNotifacation object:@(1)];
 }
 
 - (void)requestFailed:(GRRequest *)request
 {
     if ([self.delegate respondsToSelector:@selector(requestsManager:didFailRequest:withError:)]) {
-        NSError *error = [NSError errorWithDomain:@"com.albertodebortoli.goldraccoon" code:-1000 userInfo:@{@"message": request.error.message}];
+        NSError *error = [NSError errorWithDomain:@"com.github.goldraccoon" code:-1000 userInfo:@{@"message": request.error.message}];
         [self.delegate requestsManager:self didFailRequest:request withError:error];
+    }
+    
+    if (self.block) {
+        NSError *error = [NSError errorWithDomain:@"com.github.goldraccoon" code:-1000 userInfo:@{@"message": request.error.message}];
+        self.block(self,request,0,nil,nil,error,FTPManagerTypeDidFail);
     }
     
     [self _processNextRequest];
@@ -219,14 +289,54 @@
 
 - (void)percentCompleted:(float)percent forRequest:(id<GRRequestProtocol>)request
 {
+//    下载，上传完成百分比
     if (_delegateRespondsToPercentProgress) {
-        [self.delegate requestsManager:self didCompletePercent:percent forRequest:request];
+        if ([self.delegate respondsToSelector:@selector(requestsManager:didCompletePercent:forRequest:)]) {
+            [self.delegate requestsManager:self didCompletePercent:percent forRequest:request];
+        }
+        
+        if (self.block) {
+            self.block(self,request,percent,nil,nil,nil,FTPManagerTypeDidCompletePercent);
+        }
     }
 }
 
 - (void)dataAvailable:(NSData *)data forRequest:(id<GRDataExchangeRequestProtocol>)request
 {
+    //追加数据
     [_currentDownloadData appendData:data];
+    
+    if ([request isKindOfClass:[GRDownloadRequest class]]) {
+        GRDownloadRequest *downReq = (GRDownloadRequest *)request;
+        if (_haveDownloadData.length >= downReq.maximumSize) {
+            //已下载完毕
+            [downReq.delegate requestCompleted:downReq];
+            [downReq.streamInfo close: request];
+//            DLog(@"注意 该文件已下载过，如需重新下载 请删除本地缓存文件名！");
+            
+        }else{
+            //不断写入文件
+            NSString *localFilepath = downReq.localFilePath;
+            NSFileHandle *outFile = [NSFileHandle fileHandleForWritingAtPath:localFilepath];
+            if(outFile == nil)
+            {
+               
+                NSError *writeError = nil;
+                BOOL writeToFileSucceeded = [data writeToFile:localFilepath
+                        options:NSDataWritingAtomic
+                          error:&writeError];
+                if (!writeToFileSucceeded) {
+                     NSLog(@"Open of file for writing failed = %@",writeError.description);
+                }
+                return;
+            }else{
+                [outFile seekToEndOfFile];
+                [outFile writeData:data];
+            }
+            [outFile closeFile];
+        }
+        
+    }
 }
 
 - (BOOL)shouldOverwriteFile:(NSString *)filePath forRequest:(id<GRDataExchangeRequestProtocol>)request
@@ -264,8 +374,17 @@
     return temp;
 }
 
-#pragma mark - Private Methods
+//继续下载 (已经下载了的大小)
+- (NSNumber *)dateSizeHaveDownloadForRequest:(id<GRDataExchangeRequestProtocol>)request{
+    return [NSNumber numberWithUnsignedLongLong:_haveDownloadData.length];
+}
+//继续下载 (已经下载了的数据)
+- (NSData *)dateHaveDownloadForRequest:(id<GRDataExchangeRequestProtocol>)request{
+    return _haveDownloadData;
+}
 
+#pragma mark - Private Methods
+//创建request对象
 - (id<GRRequestProtocol>)_addRequestOfType:(Class)clazz withPath:(NSString *)filePath
 {
     id<GRRequestProtocol> request = [[clazz alloc] initWithDelegate:self datasource:self];
@@ -274,7 +393,7 @@
     [self _enqueueRequest:request];
     return request;
 }
-
+//创建request对象
 - (id<GRDataExchangeRequestProtocol>)_addDataExchangeRequestOfType:(Class)clazz withLocalPath:(NSString *)localPath remotePath:(NSString *)remotePath
 {
     id<GRDataExchangeRequestProtocol> request = [[clazz alloc] initWithDelegate:self datasource:self];
@@ -284,40 +403,46 @@
     [self _enqueueRequest:request];
     return request;
 }
-
+//添加请求到队列中
 - (void)_enqueueRequest:(id<GRRequestProtocol>)request
 {
     [self.requestQueue enqueue:request];
 }
 
+//取出当前进行
 - (void)_processNextRequest
 {
     self.currentRequest = [self.requestQueue dequeue];
     
     if (self.currentRequest == nil) {
         [self stopAndCancelAllRequests];
-        
-        if ([self.delegate respondsToSelector:@selector(requestsManagerDidCompleteQueue:)]) {
-            [self.delegate requestsManagerDidCompleteQueue:self];
-        }
-        
         return;
     }
     
     if ([self.currentRequest isKindOfClass:[GRDownloadRequest class]]) {
         _currentDownloadData = [NSMutableData dataWithCapacity:4096];
+        NSString *localFilepath = ((GRDownloadRequest *)self.currentRequest).localFilePath;
+        _haveDownloadData = [NSData dataWithContentsOfFile:localFilepath];
     }
     if ([self.currentRequest isKindOfClass:[GRUploadRequest class]]) {
         NSString *localFilepath = ((GRUploadRequest *)self.currentRequest).localFilePath;
         _currentUploadData = [NSData dataWithContentsOfFile:localFilepath];
+        NSLog(@"downloadfield size = %ld",_currentDownloadData.length);
     }
     
+    //
     dispatch_async(dispatch_get_main_queue(), ^{
+        //发起请求
         [self.currentRequest start];
     });
     
-    if ([self.delegate respondsToSelector:@selector(requestsManager:didScheduleRequest:)]) {
-        [self.delegate requestsManager:self didScheduleRequest:self.currentRequest];
+    if ([self.delegate respondsToSelector:@selector(requestsManager:didStartRequest:)]) {
+        //设置开启回调
+        [self.delegate requestsManager:self didStartRequest:self.currentRequest];
+    }
+    
+    if (self.block) {
+        self.block(self,self.currentRequest,0,nil,nil,nil,FTPManagerTypeDidStart);
     }
 }
 

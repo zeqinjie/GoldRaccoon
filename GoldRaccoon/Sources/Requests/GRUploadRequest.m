@@ -27,24 +27,38 @@
 
 @implementation GRUploadRequest
 
-@synthesize localFilePath = _localFilePath;
-@synthesize fullRemotePath = _fullRemotePath;
+@synthesize passiveMode;
+@synthesize uuid;
+@synthesize error;
+@synthesize streamInfo;
+@synthesize maximumSize;
+@synthesize percentCompleted;
+@synthesize delegate;
+@synthesize didOpenStream;
+@synthesize path;
+
+@synthesize listingRequest;
+@synthesize localFilePath;
+@synthesize fullRemotePath;
 
 - (void)start
 {
     self.maximumSize = LONG_MAX;
-    self.bytesIndex = 0;
-    self.bytesRemaining = 0;
+    _bytesIndex = 0;
+    _bytesRemaining = 0;
     
     if ([self.dataSource respondsToSelector:@selector(dataForUploadRequest:)] == NO) {
         [self.streamInfo streamError:self errorCode:kGRFTPClientMissingRequestDataAvailable];
+        NSLog(@"%@", self.error.message);
         return;
     }
     
     // we first list the directory to see if our folder is up on the server
+    //这里设置代理不是manager
     self.listingRequest = [[GRListingRequest alloc] initWithDelegate:self datasource:self];
 	self.listingRequest.passiveMode = self.passiveMode;
     self.listingRequest.path = [self.path stringByDeletingLastPathComponent];
+    //上传需要获取目录列表
     [self.listingRequest start];
 }
 
@@ -111,52 +125,55 @@
         case NSStreamEventOpenCompleted: {
             self.didOpenStream = YES;
             self.streamInfo.bytesTotal = 0;
-            break;
-        }
+        } 
+        break;
             
-        case NSStreamEventHasBytesAvailable:
+        case NSStreamEventHasBytesAvailable: {
+        } 
         break;
             
         case NSStreamEventHasSpaceAvailable: {
-            if (self.bytesRemaining == 0) {
+            if (_bytesRemaining == 0) {
                 if ([self.dataSource respondsToSelector:@selector(dataForUploadRequest:)]) {
-                    self.sentData = [self.dataSource dataForUploadRequest:self];
+                    _sentData = [self.dataSource dataForUploadRequest:self];
                 }
                 else {
                     return;
                 }
-                self.bytesRemaining = [_sentData length];
-                self.bytesIndex = 0;
+                _bytesRemaining = [_sentData length];
+                _bytesIndex = 0;
                 
                 // we are done
-                if (self.sentData == nil) {
+                if (_sentData == nil) {
                     [self.streamInfo streamComplete:self]; // perform callbacks and close out streams
                     return;
                 }
             }
             
-            NSUInteger nextPackageLength = MIN(kGRDefaultBufferSize, self.bytesRemaining);
-            NSRange range = NSMakeRange(self.bytesIndex, nextPackageLength);
-            NSData *packetToSend = [self.sentData subdataWithRange: range];
+            NSUInteger nextPackageLength = MIN(kGRDefaultBufferSize, _bytesRemaining);
+            NSRange range = NSMakeRange(_bytesIndex, nextPackageLength);
+            NSData *packetToSend = [_sentData subdataWithRange: range];
 
             [self.streamInfo write:self data: packetToSend];
             
-            self.bytesIndex += self.streamInfo.bytesThisIteration;
-            self.bytesRemaining -= self.streamInfo.bytesThisIteration;
-            break;
+            _bytesIndex += self.streamInfo.bytesThisIteration;
+            _bytesRemaining -= self.streamInfo.bytesThisIteration;
         }
+        break;
             
         case NSStreamEventErrorOccurred: {
             // perform callbacks and close out streams
             [self.streamInfo streamError:self errorCode:[GRError errorCodeWithError:[theStream streamError]]];
-            break;
+            NSLog(@"%@", self.error.message);
         }
+        break;
             
         case NSStreamEventEndEncountered: {
             // perform callbacks and close out streams
             [self.streamInfo streamError:self errorCode:kGRFTPServerAbortedTransfer];
-            break;
+            NSLog(@"%@", self.error.message);
         }
+        break;
         
         default:
             break;

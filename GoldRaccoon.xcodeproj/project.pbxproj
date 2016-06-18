@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		151BB3F01D14E21D00D72609 /* FTPManagerTool.m in Sources */ = {isa = PBXBuildFile; fileRef = 151BB3EF1D14E21D00D72609 /* FTPManagerTool.m */; };
 		D31F552117803EBF00387402 /* GRCreateDirectoryRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = D31F550E17803EBF00387402 /* GRCreateDirectoryRequest.m */; };
 		D31F552217803EBF00387402 /* GRDeleteRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = D31F551017803EBF00387402 /* GRDeleteRequest.m */; };
 		D31F552317803EBF00387402 /* GRDownloadRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = D31F551217803EBF00387402 /* GRDownloadRequest.m */; };
@@ -48,6 +49,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		151BB3EE1D14E21D00D72609 /* FTPManagerTool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FTPManagerTool.h; sourceTree = "<group>"; };
+		151BB3EF1D14E21D00D72609 /* FTPManagerTool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FTPManagerTool.m; sourceTree = "<group>"; };
 		D31F550D17803EBF00387402 /* GRCreateDirectoryRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GRCreateDirectoryRequest.h; sourceTree = "<group>"; };
 		D31F550E17803EBF00387402 /* GRCreateDirectoryRequest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GRCreateDirectoryRequest.m; sourceTree = "<group>"; };
 		D31F550F17803EBF00387402 /* GRDeleteRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GRDeleteRequest.h; sourceTree = "<group>"; };
@@ -240,6 +243,8 @@
 				D3622E4D177F6752009DEEEB /* GRRequestsManagerProtocol.h */,
 				D3622E4A177F6727009DEEEB /* GRRequestsManager.h */,
 				D3622E4B177F6727009DEEEB /* GRRequestsManager.m */,
+				151BB3EE1D14E21D00D72609 /* FTPManagerTool.h */,
+				151BB3EF1D14E21D00D72609 /* FTPManagerTool.m */,
 				D31F550C17803EBF00387402 /* Requests */,
 				D31F551A17803EBF00387402 /* Utils */,
 			);
@@ -362,6 +367,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D3622DFA177F3357009DEEEB /* main.m in Sources */,
+				151BB3F01D14E21D00D72609 /* FTPManagerTool.m in Sources */,
 				D3622DFE177F3357009DEEEB /* GRAppDelegate.m in Sources */,
 				D3622E4C177F6728009DEEEB /* GRRequestsManager.m in Sources */,
 				D31F552117803EBF00387402 /* GRCreateDirectoryRequest.m in Sources */,

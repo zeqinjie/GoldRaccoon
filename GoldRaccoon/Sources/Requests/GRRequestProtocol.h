@@ -21,10 +21,10 @@
 
 @protocol GRRequestProtocol <NSObject>
 
-@property (nonatomic, assign) BOOL passiveMode;
-@property (nonatomic, copy) NSString *uuid;
+@property BOOL passiveMode;
+@property NSString *uuid;
 
-@property (nonatomic, copy) NSString *path;
+@property (nonatomic) NSString *path;
 @property (nonatomic, strong) GRError *error;
 @property (nonatomic, strong) GRStreamInfo *streamInfo;
 
@@ -35,12 +35,15 @@
 - (NSURL *)fullURLWithEscape;
 - (void)start;
 - (void)cancelRequest;
-
+//子类重写
+- (void)pause;//暂停
+- (void)resume;//继续
 @end
 
 @protocol GRDataExchangeRequestProtocol <GRRequestProtocol>
-
+//下载的本地地址
 @property (nonatomic, copy) NSString *localFilePath;
+//下载的远程地址
 @property (nonatomic, readonly) NSString *fullRemotePath;
 
 @end
@@ -61,12 +64,24 @@
 @protocol GRRequestDataSource <NSObject>
 
 @required
+//获取服务器地址
 - (NSString *)hostnameForRequest:(id<GRRequestProtocol>)request;
+//获取服务器用户名
 - (NSString *)usernameForRequest:(id<GRRequestProtocol>)request;
+//获取服务器密码
 - (NSString *)passwordForRequest:(id<GRRequestProtocol>)request;
 
 @optional
+//上载大小
 - (long)dataSizeForUploadRequest:(id<GRDataExchangeRequestProtocol>)request;
+//上载数据
 - (NSData *)dataForUploadRequest:(id<GRDataExchangeRequestProtocol>)request;
+/**
+ *  下载相关
+ */
+//继续下载 (已经下载了的大小)
+- (NSNumber *)dateSizeHaveDownloadForRequest:(id<GRDataExchangeRequestProtocol>)request;
+//继续下载 (已经下载了的数据)
+- (NSData *)dateHaveDownloadForRequest:(id<GRDataExchangeRequestProtocol>)request;
 
 @end
