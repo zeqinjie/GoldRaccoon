@@ -67,7 +67,7 @@
             NSLog(@"开启请求:requestsManager:didStartRequest:");
         }else if (type == FTPManagerTypeDidCompletePercent){
             NSLog(@"完成百分比 = %f", progress);
-        }else if (type == FTPManagerTypeDidCompleteDownload){
+        }else if (type == FTPManagerTypeDidCompleteDownload || type == FTPManagerTypeDidFail){
             NSLog(@"下载完毕 删除当前任务");
             [[FTPManagerTool sharedInstance].taskDic removeObjectForKey:obj.taskName];
         }
