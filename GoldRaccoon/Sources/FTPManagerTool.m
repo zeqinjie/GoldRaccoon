@@ -17,7 +17,7 @@
 #define MPFileFullpath(url) [MPCachesDirectory stringByAppendingPathComponent:MPFileName(url)]
 
 #import "FTPManagerTool.h"
-
+#define WS(weakSelf) __weak __typeof(&*self)weakSelf = self;
 @implementation FTPManagerTaskObj
 
 
@@ -58,40 +58,67 @@
     if (!obj.localPath.length) {
         obj.localPath = [self urlForRemotePath:obj.remotePath];
     }
+    
+    if (!obj.taskName.length) {
+        obj.taskName = obj.remotePath;
+    }
+    
     if (isReDownLoad) {
         [self deleteFileAtPath:obj.localPath];
     }
     GRRequestsManager *requestManager = [[GRRequestsManager alloc]initWithHostname:obj.hostUrl user:obj.userName password:obj.userPwd];
     requestManager.taskName = obj.taskName;
-//    [self isExistenced:obj.taskName];
+    //    [self isExistenced:obj.taskName];
     [self.taskDic setObject:requestManager forKey:obj.taskName];
-    
+    WS(mv);
     [requestManager addRequestForDownloadFileAtRemotePath:obj.remotePath toLocalPath:obj.localPath];
-    requestManager.block = block;
+    requestManager.block = ^(GRRequestsManager *requestMan,GRRequest *request,CGFloat progress,NSString *pathStr,NSArray *listArr,NSError *error,FTPManagerType type){
+        block(requestMan,request,progress,pathStr,listArr,error,type);
+        if (type == FTPManagerTypeDidCompleteDownload || type == FTPManagerTypeDidFail) {
+            [mv.taskDic removeObjectForKey:obj.taskName];
+        }
+    };
     [requestManager startProcessingRequests];
     
 }
 
 - (void)upLoadTaskObj:(FTPManagerTaskObj *)obj
                 block:(FTPManCompStateBlock)block{
+    if (!obj.taskName.length) {
+        obj.taskName = obj.remotePath;
+    }
     GRRequestsManager *requestManager = [[GRRequestsManager alloc]initWithHostname:obj.hostUrl user:obj.userName password:obj.userPwd];
     requestManager.taskName = obj.taskName;
-//    [self isExistenced:obj.taskName];
+    //    [self isExistenced:obj.taskName];
     [self.taskDic setObject:requestManager forKey:obj.taskName];
     [requestManager addRequestForUploadFileAtLocalPath:obj.localPath toRemotePath:obj.remotePath];
-    requestManager.block = block;
+    WS(mv);
+    requestManager.block = ^(GRRequestsManager *requestMan,GRRequest *request,CGFloat progress,NSString *pathStr,NSArray *listArr,NSError *error,FTPManagerType type){
+        block(requestMan,request,progress,pathStr,listArr,error,type);
+        if (type == FTPManagerTypeDidCompleteUpload || type == FTPManagerTypeDidFail) {
+            [mv.taskDic removeObjectForKey:obj.taskName];
+        }
+    };
     [requestManager startProcessingRequests];
 }
 
 - (void)creatRemPathTaskObj:(FTPManagerTaskObj *)obj
                       block:(FTPManCompStateBlock)block{
-
+    if (!obj.taskName.length) {
+        obj.taskName = obj.remotePath;
+    }
     GRRequestsManager *requestManager = [[GRRequestsManager alloc]initWithHostname:obj.hostUrl user:obj.userName password:obj.userPwd];
     requestManager.taskName = obj.taskName;
-//    [self isExistenced:obj.taskName];
+    //    [self isExistenced:obj.taskName];
     [self.taskDic setObject:requestManager forKey:obj.taskName];
     [requestManager addRequestForCreateDirectoryAtPath:obj.remotePath];
-    requestManager.block = block;
+    WS(mv);
+    requestManager.block = ^(GRRequestsManager *requestMan,GRRequest *request,CGFloat progress,NSString *pathStr,NSArray *listArr,NSError *error,FTPManagerType type){
+        block(requestMan,request,progress,pathStr,listArr,error,type);
+        if (type == FTPManagerTypeDidCompleteCreateDirectory || type == FTPManagerTypeDidFail) {
+            [mv.taskDic removeObjectForKey:obj.taskName];
+        }
+    };
     [requestManager startProcessingRequests];
 }
 
@@ -128,6 +155,7 @@
     return filePath;
 }
 
+//清空文件
 - (void)deleteFileAtPath:(NSString *)delelteFilePath {
     
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -138,5 +166,4 @@
         NSLog(@"delete file");
     }
 }
-
 @end

@@ -34,6 +34,7 @@
 {
     //例子 创建远程目录
     FTPManagerTaskObj *obj = [FTPManagerTaskObj new];
+
     obj.hostUrl = @"";
     obj.userName = @"";
     obj.userPwd = @"";
@@ -44,10 +45,10 @@
             //开始
         }else if (type == FTPManagerTypeDidCompleteCreateDirectory){
             //完成
-            [[FTPManagerTool sharedInstance].taskDic removeObjectForKey:obj.taskName];
+            NSLog(@"FTPManagerTypeDidCompleteCreateDirectory");
         }else if (type == FTPManagerTypeDidFail){
             //失败
-            [[FTPManagerTool sharedInstance].taskDic removeObjectForKey:obj.taskName];
+             NSLog(@"FTPManagerTypeDidFail");
         }
     }];
 }
@@ -57,10 +58,11 @@
 - (IBAction)downloadFileButton:(id)sender
 {
     FTPManagerTaskObj *obj = [FTPManagerTaskObj new];
+    //必填参数
     obj.hostUrl = @"";
     obj.userName = @"";
     obj.userPwd = @"";
-    obj.taskName = obj.remotePath = @"down/null/1/1465011847256.txt";
+    obj.taskName = obj.remotePath = @"";
     
     [[FTPManagerTool sharedInstance]downLoadTaskObj:obj block:^(GRRequestsManager *requestMan,GRRequest *request, CGFloat progress, NSString *pathStr, NSArray *listArr, NSError *error, FTPManagerType type) {
         if(type == FTPManagerTypeDidStart) {
@@ -69,7 +71,7 @@
             NSLog(@"完成百分比 = %f", progress);
         }else if (type == FTPManagerTypeDidCompleteDownload || type == FTPManagerTypeDidFail){
             NSLog(@"下载完毕 删除当前任务");
-            [[FTPManagerTool sharedInstance].taskDic removeObjectForKey:obj.taskName];
+            
         }
     }isReDownLoad:YES];
     

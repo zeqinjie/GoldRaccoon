@@ -194,7 +194,7 @@
             self.block(self,(GRUploadRequest *)request,0,nil,nil,nil,FTPManagerTypeDidCompleteCreateDirectory);
         }
     }
-
+    
     // delete request
     if ([request isKindOfClass:[GRDeleteRequest class]]) {
         if ([self.delegate respondsToSelector:@selector(requestsManager:didCompleteDeleteRequest:)]) {
@@ -205,7 +205,7 @@
             self.block(self,(GRUploadRequest *)request,0,nil,nil,nil,FTPManagerTypeDidCompleteDelete);
         }
     }
-
+    
     // upload request
     if ([request isKindOfClass:[GRUploadRequest class]]) {
         if ([self.delegate respondsToSelector:@selector(requestsManager:didCompleteUploadRequest:)]) {
@@ -221,47 +221,36 @@
     
     // download request
     else if ([request isKindOfClass:[GRDownloadRequest class]]) {
-/*
-        NSError *writeError = nil;
-        BOOL writeToFileSucceeded = [_currentDownloadData writeToFile:((GRDownloadRequest *)request).localFilePath
-                                                              options:NSDataWritingAtomic
-                                                                error:&writeError];
-        
-        if (writeToFileSucceeded && !writeError) {
-            if ([self.delegate respondsToSelector:@selector(requestsManager:didCompleteDownloadRequest:)]) {
-                [self.delegate requestsManager:self didCompleteDownloadRequest:(GRDownloadRequest *)request];
-            }
-        }
-        else {
-            if ([self.delegate respondsToSelector:@selector(requestsManager:didFailWritingFileAtPath:forRequest:error:)]) {
-                [self.delegate requestsManager:self
-                      didFailWritingFileAtPath:((GRDownloadRequest *)request).localFilePath
-                                    forRequest:(GRDownloadRequest *)request
-                                         error:writeError];
-            }
-        }
-*/
+        /*
+         NSError *writeError = nil;
+         BOOL writeToFileSucceeded = [_currentDownloadData writeToFile:((GRDownloadRequest *)request).localFilePath
+         options:NSDataWritingAtomic
+         error:&writeError];
+         
+         if (writeToFileSucceeded && !writeError) {
+         if ([self.delegate respondsToSelector:@selector(requestsManager:didCompleteDownloadRequest:)]) {
+         [self.delegate requestsManager:self didCompleteDownloadRequest:(GRDownloadRequest *)request];
+         }
+         }
+         else {
+         if ([self.delegate respondsToSelector:@selector(requestsManager:didFailWritingFileAtPath:forRequest:error:)]) {
+         [self.delegate requestsManager:self
+         didFailWritingFileAtPath:((GRDownloadRequest *)request).localFilePath
+         forRequest:(GRDownloadRequest *)request
+         error:writeError];
+         }
+         }
+         */
         
         if ([self.delegate respondsToSelector:@selector(requestsManager:didCompleteDownloadRequest:)]) {
             [self.delegate requestsManager:self didCompleteDownloadRequest:(GRDownloadRequest *)request];
         }
         
         if (self.block) {
-            self.block(self,(GRDownloadRequest *)request,0,nil,nil,nil,FTPManagerTypeDidCompleteDownload);
+            GRDownloadRequest *downloadReq = (GRDownloadRequest *)request;
+            self.block(self,downloadReq,0,downloadReq.localFilePath,nil,nil,FTPManagerTypeDidCompleteDownload);
         }
         
-        NSError *writeError = nil;
-        if ([self.delegate respondsToSelector:@selector(requestsManager:didFailWritingFileAtPath:forRequest:error:)]) {
-            [self.delegate requestsManager:self
-                  didFailWritingFileAtPath:((GRDownloadRequest *)request).localFilePath
-                                forRequest:(GRDownloadRequest *)request
-                                     error:writeError];
-        }
-        
-        if (self.block) {
-            self.block(self,(GRDownloadRequest *)request,0,nil,nil,writeError,FTPManagerTypeDidFailWritingFileAtPath);
-        }
-
         _currentDownloadData = nil;
     }
     
@@ -289,7 +278,7 @@
 
 - (void)percentCompleted:(float)percent forRequest:(id<GRRequestProtocol>)request
 {
-//    下载，上传完成百分比
+    //    下载，上传完成百分比
     if (_delegateRespondsToPercentProgress) {
         if ([self.delegate respondsToSelector:@selector(requestsManager:didCompletePercent:forRequest:)]) {
             [self.delegate requestsManager:self didCompletePercent:percent forRequest:request];
@@ -312,7 +301,7 @@
             //已下载完毕
             [downReq.delegate requestCompleted:downReq];
             [downReq.streamInfo close: request];
-//            DLog(@"注意 该文件已下载过，如需重新下载 请删除本地缓存文件名！");
+            NSLog(@"注意 该文件已下载过，如需重新下载 请删除本地缓存文件名！");
             
         }else{
             //不断写入文件
@@ -320,13 +309,23 @@
             NSFileHandle *outFile = [NSFileHandle fileHandleForWritingAtPath:localFilepath];
             if(outFile == nil)
             {
-               
+                
                 NSError *writeError = nil;
                 BOOL writeToFileSucceeded = [data writeToFile:localFilepath
-                        options:NSDataWritingAtomic
-                          error:&writeError];
+                                                      options:NSDataWritingAtomic
+                                                        error:&writeError];
                 if (!writeToFileSucceeded) {
-                     NSLog(@"Open of file for writing failed = %@",writeError.description);
+                    NSLog(@"Open of file for writing failed = %@",writeError.description);
+                    if ([self.delegate respondsToSelector:@selector(requestsManager:didFailWritingFileAtPath:forRequest:error:)]) {
+                        [self.delegate requestsManager:self
+                              didFailWritingFileAtPath:downReq.localFilePath
+                                            forRequest:downReq
+                                                 error:writeError];
+                    }
+                    
+                    if (self.block) {
+                        self.block(self,downReq,0,downReq.localFilePath,nil,writeError,FTPManagerTypeDidFailWritingFileAtPath);
+                    }
                 }
                 return;
             }else{
