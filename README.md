@@ -94,9 +94,7 @@ addRequestForUploadFileAtLocalPath:toRemotePath:
             NSLog(@"完成百分比 = %f", progress);
         }else if (type == FTPManagerTypeDidCompleteDownload || type == FTPManagerTypeDidFail){
         //3.注意回收任务
-        NSLog(@"下载完毕或者失败 删除当前任务");
-            
-	[[FTPManagerTool sharedInstance].taskDic removeObjectForKey:obj.taskName];
+        NSLog(@"下载完毕或者失败");
         }
     }isReDownLoad:YES];
     
