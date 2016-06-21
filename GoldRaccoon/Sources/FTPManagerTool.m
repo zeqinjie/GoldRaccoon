@@ -75,7 +75,7 @@
     requestManager.block = ^(GRRequestsManager *requestMan,GRRequest *request,CGFloat progress,NSString *pathStr,NSArray *listArr,NSError *error,FTPManagerType type){
         block(requestMan,request,progress,pathStr,listArr,error,type);
         if (type == FTPManagerTypeDidCompleteDownload || type == FTPManagerTypeDidFail) {
-            [mv.taskDic removeObjectForKey:obj.taskName];
+            [mv cancelTask:obj.taskName];
         }
     };
     [requestManager startProcessingRequests];
@@ -96,7 +96,7 @@
     requestManager.block = ^(GRRequestsManager *requestMan,GRRequest *request,CGFloat progress,NSString *pathStr,NSArray *listArr,NSError *error,FTPManagerType type){
         block(requestMan,request,progress,pathStr,listArr,error,type);
         if (type == FTPManagerTypeDidCompleteUpload || type == FTPManagerTypeDidFail) {
-            [mv.taskDic removeObjectForKey:obj.taskName];
+            [mv cancelTask:obj.taskName];
         }
     };
     [requestManager startProcessingRequests];
@@ -116,12 +116,17 @@
     requestManager.block = ^(GRRequestsManager *requestMan,GRRequest *request,CGFloat progress,NSString *pathStr,NSArray *listArr,NSError *error,FTPManagerType type){
         block(requestMan,request,progress,pathStr,listArr,error,type);
         if (type == FTPManagerTypeDidCompleteCreateDirectory || type == FTPManagerTypeDidFail) {
-            [mv.taskDic removeObjectForKey:obj.taskName];
+            [mv cancelTask:obj.taskName];
         }
     };
     [requestManager startProcessingRequests];
 }
 
+- (void)cancelTask:(NSString *)taskName{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 *NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self.taskDic removeObjectForKey:taskName];
+    });
+}
 
 - (void)isExistenced:(NSString *)str{
     BOOL isExistenced = [self.taskDic.allKeys containsObject:str];
